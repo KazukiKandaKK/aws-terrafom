@@ -1,0 +1,158 @@
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
+    }
+  }
+
+  # Backend configuration is in backend.tf
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Environment = "prod"
+      Project     = var.project_name
+      ManagedBy   = "terraform"
+    }
+  }
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+locals {
+  availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
+}
+
+module "vpc" {
+  source = "../../modules/vpc"
+
+  environment            = "prod"
+  vpc_cidr              = "10.1.0.0/16"
+  public_subnet_cidrs   = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
+  private_subnet_cidrs  = ["10.1.4.0/24", "10.1.5.0/24", "10.1.6.0/24"]
+  availability_zones    = local.availability_zones
+}
+
+module "security_groups" {
+  source = "../../modules/security_groups"
+
+  environment = "prod"
+  vpc_id      = module.vpc.vpc_id
+  app_port    = 8080
+  db_port     = 3306
+}
+
+module "alb" {
+  source = "../../modules/alb"
+
+  environment             = "prod"
+  vpc_id                 = module.vpc.vpc_id
+  public_subnet_ids      = module.vpc.public_subnet_ids
+  alb_security_group_id  = module.security_groups.alb_security_group_id
+  app_port               = 8080
+  health_check_path      = "/health"
+  certificate_arn        = var.certificate_arn
+  enable_deletion_protection = true
+}
+
+module "ecs" {
+  source = "../../modules/ecs"
+
+  environment            = "prod"
+  aws_region            = var.aws_region
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  ecs_security_group_id = module.security_groups.ecs_security_group_id
+  target_group_arn      = module.alb.target_group_arn
+  app_image             = var.app_image
+  app_port              = 8080
+  app_count             = 3
+  fargate_cpu           = 512
+  fargate_memory        = 1024
+  log_retention_in_days = 90
+
+  environment_variables = [
+    {
+      name  = "ENVIRONMENT"
+      value = "prod"
+    },
+    {
+      name  = "DB_HOST"
+      value = module.rds.db_instance_endpoint
+    }
+  ]
+}
+
+module "rds" {
+  source = "../../modules/rds"
+
+  environment             = "prod"
+  private_subnet_ids     = module.vpc.private_subnet_ids
+  rds_security_group_id  = module.security_groups.rds_security_group_id
+  engine                 = "mysql"
+  engine_version         = "8.0"
+  instance_class         = "db.r5.large"
+  allocated_storage      = 100
+  max_allocated_storage  = 1000
+  db_name               = var.db_name
+  username              = var.db_username
+  password              = var.db_password
+  backup_retention_period = 30
+  skip_final_snapshot    = false
+  deletion_protection    = true
+  performance_insights_enabled = true
+  monitoring_interval    = 60
+}
+
+module "s3" {
+  source = "../../modules/s3"
+
+  environment        = "prod"
+  app_name          = var.project_name
+  enable_versioning = true
+  log_retention_days = 365
+}
+
+module "waf" {
+  source = "../../modules/waf"
+
+  environment           = "prod"
+  alb_arn              = module.alb.alb_arn
+  rate_limit           = 5000
+  ip_whitelist_enabled = var.ip_whitelist_enabled
+  whitelist_ips        = var.whitelist_ips
+  log_retention_in_days = 90
+}
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  environment  = "prod"
+  project_name = var.project_name
+}
+
+module "codepipeline" {
+  source = "../../modules/codepipeline"
+
+  environment           = "prod"
+  project_name          = var.project_name
+  aws_region           = var.aws_region
+  aws_account_id       = var.aws_account_id
+  ecr_repository_name  = module.ecr.repository_name
+  ecs_cluster_name     = module.ecs.cluster_id
+  ecs_service_name     = module.ecs.service_name
+  source_bucket_name   = var.source_bucket_name
+  source_object_key    = var.source_object_key
+  codebuild_compute_type = "BUILD_GENERAL1_MEDIUM"
+  log_retention_in_days = 90
+}

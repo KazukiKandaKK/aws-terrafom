@@ -1,0 +1,6 @@
+# AWS Configuration
+aws_region = "ap-northeast-1"
+
+# Terraform State Management
+state_bucket_name    = "my-company-terraform-state-bucket"
+dynamodb_table_name  = "terraform-state-lock"

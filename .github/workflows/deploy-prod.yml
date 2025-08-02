@@ -1,0 +1,133 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ prod-release ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  TERRAFORM_VERSION: 1.5.0
+
+jobs:
+  terraform:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment: production
+    
+    defaults:
+      run:
+        working-directory: terraform/prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="terraform.tfvars" -out=tfplan
+        env:
+          TF_VAR_db_password: ${{ secrets.PROD_DB_PASSWORD }}
+
+      - name: Save Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/prod/tfplan
+
+      - name: Wait for Manual Approval
+        if: github.ref == 'refs/heads/prod-release'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: ${{ vars.PRODUCTION_APPROVERS }}
+          minimum-approvals: 2
+          issue-title: "🚨 PRODUCTION DEPLOYMENT - Requires Approval"
+          issue-body: |
+            ## Production Deployment Request
+            
+            **⚠️ This deployment will affect the production environment ⚠️**
+            
+            **Environment:** Production
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Author:** ${{ github.actor }}
+            
+            ### Pre-deployment Checklist
+            - [ ] Staging environment tested successfully
+            - [ ] Database migration scripts reviewed (if applicable)
+            - [ ] Rollback plan prepared
+            - [ ] Monitoring alerts configured
+            - [ ] Team notified of deployment window
+            
+            **Required Approvals:** 2 minimum
+            **Approved by:** ${{ vars.PRODUCTION_APPROVERS }}
+            
+            Please review the Terraform plan in the workflow logs before approving.
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/prod-release'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Output ALB DNS
+        if: github.ref == 'refs/heads/prod-release'
+        run: |
+          echo "ALB DNS Name: $(terraform output -raw alb_dns_name)"
+          echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV
+
+      - name: Create Release Tag
+        if: github.ref == 'refs/heads/prod-release' && success()
+        run: |
+          git tag "prod-$(date +'%Y%m%d-%H%M%S')"
+          git push origin --tags
+
+      - name: Slack Notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            🚀 Production deployment ${{ job.status }}!
+            
+            **Environment:** Production
+            **Status:** ${{ job.status }}
+            **ALB DNS:** ${{ env.ALB_DNS_NAME }}
+            **Deployed by:** ${{ github.actor }}
+            **Commit:** ${{ github.sha }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Post-deployment Health Check
+        if: github.ref == 'refs/heads/prod-release' && success()
+        run: |
+          echo "Waiting for ALB to be ready..."
+          sleep 60
+          
+          # Health check
+          if curl -f -s "http://${{ env.ALB_DNS_NAME }}/health"; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
