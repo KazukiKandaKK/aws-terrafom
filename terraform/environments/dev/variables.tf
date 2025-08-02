@@ -55,3 +55,15 @@ variable "source_object_key" {
   type        = string
   default     = "source.zip"
 }
+
+variable "ip_whitelist_enabled" {
+  description = "Enable IP whitelist for WAF"
+  type        = bool
+  default     = false
+}
+
+variable "whitelist_ips" {
+  description = "List of IP addresses to whitelist"
+  type        = list(string)
+  default     = []
+}

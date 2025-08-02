@@ -36,26 +36,22 @@ resource "aws_s3_bucket_versioning" "app_logs" {
   }
 }
 
-resource "aws_s3_bucket_encryption" "app_assets" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "app_assets" {
   bucket = aws_s3_bucket.app_assets.id
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
 }
 
-resource "aws_s3_bucket_encryption" "app_logs" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "app_logs" {
   bucket = aws_s3_bucket.app_logs.id
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
 }
@@ -85,6 +81,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_assets" {
     id     = "assets_lifecycle"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     noncurrent_version_expiration {
       noncurrent_days = 30
     }
@@ -101,6 +101,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_logs" {
   rule {
     id     = "logs_lifecycle"
     status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
 
     expiration {
       days = var.log_retention_days

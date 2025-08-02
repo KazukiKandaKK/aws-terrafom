@@ -153,5 +153,6 @@ module "codepipeline" {
   ecs_service_name     = module.ecs.service_name
   source_bucket_name   = var.source_bucket_name
   source_object_key    = var.source_object_key
+  codebuild_compute_type = "BUILD_GENERAL1_SMALL"
   log_retention_in_days = 60
 }
