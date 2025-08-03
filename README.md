@@ -615,17 +615,24 @@ Terraform state is stored in S3 with DynamoDB locking:
 - Staging: `s3://your-bucket/stg/terraform.tfstate`
 - Production: `s3://your-bucket/prod/terraform.tfstate`
 
-## Manual Deployment Steps
+## 手動デプロイ手順
 
-For manual deployments (not recommended for production):
+本番環境では推奨されませんが、手動でデプロイする場合の手順です：
 
-1. **Setup state backend** (run bootstrap first)
-2. **Build and push your Docker image to ECR**
-3. **Configure variables in terraform.tfvars**
-4. **Initialize Terraform**: `terraform init`
-5. **Plan deployment**: `terraform plan`
-6. **Apply configuration**: `terraform apply`
-7. **Update DNS** to point to the ALB DNS name
+1. **状態バックエンドのセットアップ**（事前にbootstrapを実行）
+2. **DockerイメージをECRにビルド & プッシュ**
+
+   ```bash
+   bash script/docker-push.sh -r <リージョン> -n <リポジトリ名> [-t <タグ>] [-f <Dockerfile>] [-c <コンテキスト>]
+   ```
+
+   このヘルパースクリプトはDockerイメージをビルドし、指定したECRリポジトリにプッシュします。
+   利用可能なオプションは`-h`で確認できます。
+3. **terraform.tfvarsの変数を設定**
+4. **Terraformの初期化**: `terraform init`
+5. **Planの実行**: `terraform plan`
+6. **設定の適用**: `terraform apply`
+7. **DNSを更新**してALBのDNS名を指すようにする
 
 ## GitHub Actions Features
 
