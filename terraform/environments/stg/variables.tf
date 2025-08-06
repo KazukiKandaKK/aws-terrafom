@@ -27,18 +27,6 @@ variable "db_name" {
   default     = "appdb"
 }
 
-variable "db_username" {
-  description = "Database username"
-  type        = string
-  default     = "admin"
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
-}
-
 variable "multi_az" {
   description = "Enable Multi-AZ deployment"
   type        = bool

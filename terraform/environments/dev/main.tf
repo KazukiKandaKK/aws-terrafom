@@ -34,6 +34,14 @@ locals {
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
 }
 
+data "aws_secretsmanager_secret_version" "db_username" {
+  secret_id = "db_username"
+}
+
+data "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = "db_password"
+}
+
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -94,6 +102,17 @@ module "ecs" {
       value = module.rds.db_instance_endpoint
     }
   ]
+
+  secrets = [
+    {
+      name      = "DB_USERNAME"
+      valueFrom = data.aws_secretsmanager_secret_version.db_username.arn
+    },
+    {
+      name      = "DB_PASSWORD"
+      valueFrom = data.aws_secretsmanager_secret_version.db_password.arn
+    }
+  ]
 }
 
 module "rds" {
@@ -108,8 +127,8 @@ module "rds" {
   allocated_storage      = 20
   max_allocated_storage  = 100
   db_name               = var.db_name
-  username              = var.db_username
-  password              = var.db_password
+  username              = data.aws_secretsmanager_secret_version.db_username.secret_string
+  password              = data.aws_secretsmanager_secret_version.db_password.secret_string
   backup_retention_period = 3
   skip_final_snapshot    = true
   deletion_protection    = false
