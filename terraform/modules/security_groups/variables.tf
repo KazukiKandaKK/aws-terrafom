@@ -19,3 +19,18 @@ variable "db_port" {
   type        = number
   default     = 3306
 }
+
+variable "alb_egress_cidr_blocks" {
+  description = "CIDR blocks for ALB security group egress"
+  type        = list(string)
+}
+
+variable "ecs_egress_cidr_blocks" {
+  description = "CIDR blocks for ECS security group egress"
+  type        = list(string)
+}
+
+variable "rds_egress_cidr_blocks" {
+  description = "CIDR blocks for RDS security group egress"
+  type        = list(string)
+}

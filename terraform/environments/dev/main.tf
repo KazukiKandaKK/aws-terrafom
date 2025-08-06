@@ -51,6 +51,9 @@ module "security_groups" {
   vpc_id      = module.vpc.vpc_id
   app_port    = 8080
   db_port     = 3306
+  alb_egress_cidr_blocks = [module.vpc.vpc_cidr_block]
+  ecs_egress_cidr_blocks = [module.vpc.vpc_cidr_block]
+  rds_egress_cidr_blocks = [module.vpc.vpc_cidr_block]
 }
 
 module "alb" {
