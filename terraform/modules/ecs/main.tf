@@ -151,3 +151,94 @@ resource "aws_ecs_service" "app" {
     Environment = var.environment
   }
 }
+
+# Autoscaling target for ECS service
+resource "aws_appautoscaling_target" "service" {
+  count              = var.enable_autoscaling ? 1 : 0
+  max_capacity       = var.autoscaling_max_capacity
+  min_capacity       = var.autoscaling_min_capacity
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+# Scale-out policy
+resource "aws_appautoscaling_policy" "scale_out" {
+  count              = var.enable_autoscaling ? 1 : 0
+  name               = "${var.environment}-ecs-scale-out"
+  policy_type        = "StepScaling"
+  resource_id        = aws_appautoscaling_target.service[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.service[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.service[0].service_namespace
+
+  step_scaling_policy_configuration {
+    adjustment_type         = "ChangeInCapacity"
+    cooldown                = var.scale_out_cooldown
+    metric_aggregation_type = "Average"
+
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment          = var.scale_out_adjustment
+    }
+  }
+}
+
+# Scale-in policy
+resource "aws_appautoscaling_policy" "scale_in" {
+  count              = var.enable_autoscaling ? 1 : 0
+  name               = "${var.environment}-ecs-scale-in"
+  policy_type        = "StepScaling"
+  resource_id        = aws_appautoscaling_target.service[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.service[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.service[0].service_namespace
+
+  step_scaling_policy_configuration {
+    adjustment_type         = "ChangeInCapacity"
+    cooldown                = var.scale_in_cooldown
+    metric_aggregation_type = "Average"
+
+    step_adjustment {
+      metric_interval_upper_bound = 0
+      scaling_adjustment          = var.scale_in_adjustment
+    }
+  }
+}
+
+# CloudWatch alarms triggering scale policies
+resource "aws_cloudwatch_metric_alarm" "high" {
+  count               = var.enable_autoscaling ? 1 : 0
+  alarm_name          = "${var.environment}-ecs-${lower(var.autoscaling_metric_type)}-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  metric_name         = var.autoscaling_metric_type == "MEMORY" ? "MemoryUtilization" : "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60
+  statistic           = "Average"
+  threshold           = var.scale_out_threshold
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.app.name
+  }
+
+  alarm_actions = [aws_appautoscaling_policy.scale_out[0].arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "low" {
+  count               = var.enable_autoscaling ? 1 : 0
+  alarm_name          = "${var.environment}-ecs-${lower(var.autoscaling_metric_type)}-low"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  metric_name         = var.autoscaling_metric_type == "MEMORY" ? "MemoryUtilization" : "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60
+  statistic           = "Average"
+  threshold           = var.scale_in_threshold
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.app.name
+  }
+
+  alarm_actions = [aws_appautoscaling_policy.scale_in[0].arn]
+}

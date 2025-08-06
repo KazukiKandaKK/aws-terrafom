@@ -75,3 +75,63 @@ variable "secrets" {
   }))
   default = []
 }
+
+variable "enable_autoscaling" {
+  description = "Enable ECS service autoscaling"
+  type        = bool
+  default     = false
+}
+
+variable "autoscaling_min_capacity" {
+  description = "Minimum number of running tasks"
+  type        = number
+  default     = 1
+}
+
+variable "autoscaling_max_capacity" {
+  description = "Maximum number of running tasks"
+  type        = number
+  default     = 4
+}
+
+variable "autoscaling_metric_type" {
+  description = "Metric to use for autoscaling (CPU or MEMORY)"
+  type        = string
+  default     = "CPU"
+}
+
+variable "scale_out_threshold" {
+  description = "Metric threshold to trigger scale out"
+  type        = number
+  default     = 75
+}
+
+variable "scale_in_threshold" {
+  description = "Metric threshold to trigger scale in"
+  type        = number
+  default     = 25
+}
+
+variable "scale_out_cooldown" {
+  description = "Cooldown period after scaling out (seconds)"
+  type        = number
+  default     = 60
+}
+
+variable "scale_in_cooldown" {
+  description = "Cooldown period after scaling in (seconds)"
+  type        = number
+  default     = 300
+}
+
+variable "scale_out_adjustment" {
+  description = "Number of tasks to add on scale out"
+  type        = number
+  default     = 1
+}
+
+variable "scale_in_adjustment" {
+  description = "Number of tasks to remove on scale in"
+  type        = number
+  default     = -1
+}
