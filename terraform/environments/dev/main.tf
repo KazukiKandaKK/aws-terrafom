@@ -134,6 +134,12 @@ module "rds" {
   deletion_protection    = false
 }
 
+module "kms" {
+  source = "../../modules/kms"
+
+  environment = "dev"
+}
+
 module "s3" {
   source = "../../modules/s3"
 
@@ -141,6 +147,7 @@ module "s3" {
   app_name          = var.project_name
   enable_versioning = true
   log_retention_days = 30
+  kms_key_arn        = module.kms.kms_key_arn
 }
 
 module "waf" {
@@ -174,4 +181,5 @@ module "codepipeline" {
   source_object_key    = var.source_object_key
   codebuild_compute_type = "BUILD_GENERAL1_SMALL"
   log_retention_in_days = 30
+  kms_key_arn           = module.kms.kms_key_arn
 }

@@ -136,6 +136,12 @@ module "rds" {
   monitoring_interval    = 60
 }
 
+module "kms" {
+  source = "../../modules/kms"
+
+  environment = "prod"
+}
+
 module "s3" {
   source = "../../modules/s3"
 
@@ -143,6 +149,7 @@ module "s3" {
   app_name          = var.project_name
   enable_versioning = true
   log_retention_days = 365
+  kms_key_arn        = module.kms.kms_key_arn
 }
 
 module "waf" {
@@ -177,4 +184,5 @@ module "codepipeline" {
   source_object_key    = var.source_object_key
   codebuild_compute_type = "BUILD_GENERAL1_MEDIUM"
   log_retention_in_days = 90
+  kms_key_arn           = module.kms.kms_key_arn
 }
