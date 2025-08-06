@@ -67,3 +67,7 @@ variable "log_retention_in_days" {
   type        = number
   default     = 30
 }
+variable "kms_key_arn" {
+  description = "ARN of the KMS key for bucket encryption"
+  type        = string
+}
