@@ -33,6 +33,7 @@ resource "aws_db_instance" "main" {
   max_allocated_storage = var.max_allocated_storage
   storage_type          = var.storage_type
   storage_encrypted     = var.storage_encrypted
+  multi_az              = var.multi_az
 
   engine         = var.engine
   engine_version = var.engine_version

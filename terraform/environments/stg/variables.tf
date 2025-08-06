@@ -39,6 +39,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment"
+  type        = bool
+  default     = false
+}
+
 variable "ip_whitelist_enabled" {
   description = "Enable IP whitelist for WAF"
   type        = bool

@@ -40,6 +40,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment"
+  type        = bool
+  default     = false
+}
+
 variable "aws_account_id" {
   description = "AWS account ID"
   type        = string
