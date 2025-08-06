@@ -28,6 +28,16 @@ output "artifacts_bucket_arn" {
   value       = aws_s3_bucket.codepipeline_artifacts.arn
 }
 
+output "access_logs_bucket_name" {
+  description = "S3 access logs bucket name"
+  value       = aws_s3_bucket.access_logs.bucket
+}
+
+output "access_logs_bucket_arn" {
+  description = "S3 access logs bucket ARN"
+  value       = aws_s3_bucket.access_logs.arn
+}
+
 output "codepipeline_role_arn" {
   description = "CodePipeline IAM role ARN"
   value       = aws_iam_role.codepipeline_role.arn
