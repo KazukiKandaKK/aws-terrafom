@@ -101,6 +101,12 @@ variable "deletion_protection" {
   default     = true
 }
 
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment"
+  type        = bool
+  default     = false
+}
+
 variable "performance_insights_enabled" {
   description = "Enable Performance Insights"
   type        = bool
