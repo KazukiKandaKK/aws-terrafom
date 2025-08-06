@@ -16,6 +16,16 @@ resource "aws_s3_bucket" "app_logs" {
   }
 }
 
+resource "aws_s3_bucket" "access_logs" {
+  bucket = "${var.environment}-s3-access-logs-${random_string.bucket_suffix.result}"
+  acl    = "log-delivery-write"
+
+  tags = {
+    Name        = "${var.environment}-s3-access-logs"
+    Environment = var.environment
+  }
+}
+
 resource "random_string" "bucket_suffix" {
   length  = 8
   special = false
@@ -31,6 +41,13 @@ resource "aws_s3_bucket_versioning" "app_assets" {
 
 resource "aws_s3_bucket_versioning" "app_logs" {
   bucket = aws_s3_bucket.app_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -56,6 +73,16 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "app_logs" {
   }
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "app_assets" {
   bucket = aws_s3_bucket.app_assets.id
 
@@ -72,6 +99,27 @@ resource "aws_s3_bucket_public_access_block" "app_logs" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_public_access_block" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_logging" "app_assets" {
+  bucket        = aws_s3_bucket.app_assets.id
+  target_bucket = aws_s3_bucket.access_logs.id
+  target_prefix = "app-assets/"
+}
+
+resource "aws_s3_bucket_logging" "app_logs" {
+  bucket        = aws_s3_bucket.app_logs.id
+  target_bucket = aws_s3_bucket.access_logs.id
+  target_prefix = "app-logs/"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "app_assets" {
