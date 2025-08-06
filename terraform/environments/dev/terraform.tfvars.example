@@ -12,8 +12,6 @@ app_image = "your-account.dkr.ecr.ap-northeast-1.amazonaws.com/my-app:latest"
 
 # Database Configuration
 db_name     = "appdb"
-db_username = "admin"
-db_password = "change-me-please"
 multi_az   = false
 
 # AWS Account Configuration

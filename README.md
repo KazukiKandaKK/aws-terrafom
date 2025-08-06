@@ -204,7 +204,6 @@ git push origin prod-release
 ### 必須変数
 
 - `app_image`: アプリケーション用のDockerイメージURL
-- `db_password`: データベース用のセキュアなパスワード
 - `certificate_arn`: SSL証明書ARN（本番環境では必須）
 
 ### オプション変数
@@ -212,7 +211,8 @@ git push origin prod-release
 - `aws_region`: AWSリージョン（デフォルト: ap-northeast-1）
 - `project_name`: リソース命名用のプロジェクト名
 - `db_name`: データベース名
-- `db_username`: データベースユーザー名
+-
+データベースのユーザー名とパスワードは AWS Secrets Manager の `db_username` と `db_password` シークレットから取得されます。
 
 ## 環境の違い
 
@@ -560,7 +560,6 @@ The workflow will detect changes and run plans for affected environments.
 ### Required Variables
 
 - `app_image`: Docker image URL for your application
-- `db_password`: Secure password for the database
 - `certificate_arn`: SSL certificate ARN (required for prod)
 
 ### Optional Variables
@@ -568,7 +567,8 @@ The workflow will detect changes and run plans for affected environments.
 - `aws_region`: AWS region (default: ap-northeast-1)
 - `project_name`: Project name for resource naming
 - `db_name`: Database name
-- `db_username`: Database username
+-
+Database credentials are retrieved from the `db_username` and `db_password` secrets in AWS Secrets Manager.
 
 ## Environment Differences
 

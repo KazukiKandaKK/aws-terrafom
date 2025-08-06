@@ -12,8 +12,6 @@ certificate_arn = "arn:aws:acm:ap-northeast-1:123456789012:certificate/12345678-
 
 # Database Configuration
 db_name     = "appdb"
-db_username = "admin"
-db_password = "super-secure-password-change-me"
 multi_az   = true
 
 # AWS Account Configuration
